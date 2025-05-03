@@ -30,14 +30,19 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3.3.0
 
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v2
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
       
+      - name: Install protobuf
+        run: |
+          vcpkg install protobuf:x64-windows
+          
       - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DUSE_QT5=ON
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DUSE_QT5=ON -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
-        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -DUSE_QT5=ON
+        run: cmake -B build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -DUSE_QT5=ON
 
       - name: Test
         working-directory: ${{github.workspace}}/build
