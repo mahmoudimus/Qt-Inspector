@@ -1,0 +1,51 @@
+name: make
+
+on: [push, pull_request, workflow_dispatch]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+
+
+jobs:
+  build:
+    runs-on: windows-2019
+    env:
+      # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+      BUILD_TYPE: Release
+      CI_QT_VERSION: 5.15.2
+    steps:
+      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enable Developer Command Prompt (Windows)
+        uses: ilammy/msvc-dev-cmd@v1.12.1
+        with:
+            # 14.1 is for vs2017, 14.2 is vs2019, omit key for latest
+            toolset: 14.2
+            sdk: "10.0.19041.0"
+            arch: amd64
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3.3.0
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+      
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --USE_QT5=true
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C ${{env.BUILD_TYPE}}
+        
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Qt-Inspector-${{ env.CI_QT_VERSION }}.zip
+          path: ${{ github.workspace }}/build/release
+
